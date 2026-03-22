@@ -1,0 +1,98 @@
+name: Update Servers Hourly
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Каждый час
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Create filter script
+        run: |
+          cat > filter_servers.py << 'EOF'
+          #!/usr/bin/env python3
+          import urllib.request
+          import re
+          from datetime import datetime, timezone
+
+          SOURCE_URL = "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
+          TARGETS = ["🇷🇺 VK", "🇷🇺 Yandex", "⏰ TimeWeb", "🔥 Max"]
+
+          def main():
+              try:
+                  # Скачиваем исходник
+                  req = urllib.request.Request(
+                      SOURCE_URL,
+                      headers={'User-Agent': 'Mozilla/5.0'}
+                  )
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      content = response.read().decode('utf-8', errors='ignore')
+              except Exception as e:
+                  print(f"Error fetching source: {e}")
+                  return
+
+              lines = content.strip().split('\n')
+              seen = set()
+              filtered = []
+
+              for line in lines:
+                  line = line.strip()
+                  if not line or not line.startswith('vless://'):
+                      continue
+                  
+                  # Проверяем, содержит ли нужный тег
+                  if any(target in line for target in TARGETS):
+                      # Убираем номер для дедупликации
+                      clean = re.sub(r' — #\d+$', '', line)
+                      if clean not in seen:
+                          seen.add(clean)
+                          filtered.append(clean)
+
+              # Записываем результат
+              header = f"# Auto-updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+              header += f"# Source: {SOURCE_URL}\n"
+              header += f"# Servers: {len(filtered)}\n\n"
+
+              with open('vless_filtered.txt', 'w', encoding='utf-8') as f:
+                  f.write(header + '\n'.join(filtered))
+
+              print(f"Saved {len(filtered)} unique servers")
+
+          if __name__ == "__main__":
+              main()
+          EOF
+          
+      - name: Run filter script
+        run: python filter_servers.py
+        
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Проверяем, есть ли изменения
+          if [ -f vless_filtered.txt ]; then
+            git add vless_filtered.txt
+            
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "🔄 Auto-update servers - $(date -u '+%Y-%m-%d %H:%M UTC')"
+              git push
+              echo "Changes pushed successfully"
+            fi
+          else
+            echo "Output file not created!"
+            exit 1
+          fi
