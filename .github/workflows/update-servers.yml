@@ -1,121 +1,53 @@
-name: Update Servers Hourly
+import requests
+import base64
+import time
+from flask import Flask, Response
 
-on:
-  schedule:
-    - cron: '0 * * * *'  # Запуск каждый час
-  workflow_dispatch:      # Кнопка для ручного запуска
+app = Flask(__name__)
 
-jobs:
-  update:
-    runs-on: ubuntu-latest
+# Ссылки на источники (можно добавить несколько через запятую)
+SOURCES = [
+    "https://raw.githubusercontent.com/zieng2/wl/main/vless_lite.txt",
+    "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
+]
+
+def generate_subscription():
+    unique_configs = set()
     
-    # Убираем Warning о Node.js 20, принудительно включая Node.js 24
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    for url in SOURCES:
+        try:
+            print(f"[{time.strftime('%H:%M:%S')}] Загрузка: {url}")
+            r = requests.get(url, timeout=15)
+            r.raise_for_status()
+            
+            # Очистка и фильтрация
+            for line in r.text.splitlines():
+                line = line.strip()
+                # Берем только строки, начинающиеся на протоколы (vless, ss, trojan)
+                if line.startswith(('vless://', 'ss://', 'trojan://', 'vmess://')):
+                    unique_configs.add(line)
+                    
+        except Exception as e:
+            print(f"Ошибка при работе с {url}: {e}")
 
-    # Даем права боту на внесение изменений в репозиторий
-    permissions:
-      contents: write
+    # Склеиваем всё в один текст с переносом строки
+    final_text = "\n".join(list(unique_configs))
+    
+    # Считаем количество для лога в консоль
+    print(f"[{time.strftime('%H:%M:%S')}] Собрано серверов: {len(unique_configs)}")
+    
+    # Для клиентов (v2rayNG и т.д.) кодируем в Base64
+    # Если Remnawave ругается на Base64, можно возвращать final_text напрямую
+    encoded_data = base64.b64encode(final_text.encode('utf-8')).decode('utf-8')
+    return encoded_data
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+@app.route('/sub')
+def sub_route():
+    data = generate_subscription()
+    if not data:
+        return "No servers found", 404
+    return Response(data, mimetype='text/plain')
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Create filter script
-        run: |
-          cat > filter_servers.py << 'EOF'
-          #!/usr/bin/env python3
-          import urllib.request
-          import re
-          from datetime import datetime, timezone
-          import sys
-
-          SOURCE_URL = "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
-          TARGETS = ["🇷🇺 VK", "🇷🇺 Yandex", "⏰ TimeWeb", "🔥 Max"]
-
-          def main():
-              try:
-                  print(f"[*] Fetching data from: {SOURCE_URL}")
-                  req = urllib.request.Request(
-                      SOURCE_URL,
-                      headers={'User-Agent': 'Mozilla/5.0'}
-                  )
-                  with urllib.request.urlopen(req, timeout=30) as response:
-                      content = response.read().decode('utf-8', errors='ignore')
-              except Exception as e:
-                  print(f"[ERROR] Failed to fetch source: {e}", file=sys.stderr)
-                  sys.exit(1)
-
-              lines = content.strip().split('\n')
-              seen = set()
-              filtered = []
-
-              for line in lines:
-                  line = line.strip()
-                  if not line or not line.startswith('vless://'):
-                      continue
-
-                  # Проверка на наличие нужных тегов
-                  if any(target in line for target in TARGETS):
-                      # Дедупликация (убираем хвост с номером)
-                      clean = re.sub(r' — #\d+$', '', line)
-                      if clean not in seen:
-                          seen.add(clean)
-                          filtered.append(clean)
-
-              if not filtered:
-                  print("[WARNING] No matching servers found!", file=sys.stderr)
-
-              try:
-                  header = f"# Auto-updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
-                  header += f"# Source: {SOURCE_URL}\n"
-                  header += f"# Servers count: {len(filtered)}\n\n"
-
-                  with open('vless_filtered.txt', 'w', encoding='utf-8') as f:
-                      f.write(header + '\n'.join(filtered))
-
-                  print(f"[SUCCESS] Processed {len(filtered)} unique servers.")
-              except Exception as e:
-                  print(f"[ERROR] Writing file failed: {e}", file=sys.stderr)
-                  sys.exit(1)
-
-          if __name__ == "__main__":
-              main()
-          EOF
-
-      - name: Run filter script
-        run: python filter_servers.py
-
-      - name: Commit and push
-        run: |
-          # Включаем подробный вывод и остановку при ошибках
-          set -ex
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          if [ -f vless_filtered.txt ]; then
-            git add vless_filtered.txt
-
-            # Проверка, изменился ли файл на самом деле
-            if git diff --staged --quiet; then
-              echo "No changes detected. Skipping commit."
-            else
-              git commit -m "🔄 Auto-update servers - $(date -u '+%Y-%m-%d %H:%M UTC')"
-              
-              # Попытка пуша с логированием ошибки
-              git push || { 
-                echo "[ERROR] Push failed. Check if 'Read and write permissions' are enabled in Repo Settings -> Actions -> General." >&2; 
-                exit 1; 
-              }
-              echo "Changes pushed successfully."
-            fi
-          else
-            echo "[ERROR] vless_filtered.txt not found!" >&2
-            exit 1
-          fi
+if __name__ == "__main__":
+    # Запускаем. Порт 8080.
+    app.run(host='0.0.0.0', port=8080)
