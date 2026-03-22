@@ -4,10 +4,9 @@ import time
 import sys
 
 # === НАСТРОЙКИ ===
-# Ключевые слова для поиска
+# Ищем ТОЛЬКО в названии (после символа #)
 KEYWORDS = ['vk', 'yandex', 'яндекс', 'timeweb', 'max']
 
-# Ваши персональные источники
 SOURCES = [
     "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt",
     "https://raw.githubusercontent.com/zieng2/wl/main/vless_lite.txt"
@@ -21,7 +20,7 @@ def main():
     final_configs = []
     unique_lines = set()
     
-    log(f"Запуск фильтрации. Ключевые слова: {', '.join(KEYWORDS)}")
+    log(f"Запуск строгой фильтрации по названиям: {', '.join(KEYWORDS)}")
 
     for url in SOURCES:
         try:
@@ -31,38 +30,37 @@ def main():
             
             content = response.text
             
-            # Декодирование, если весь файл в base64
+            # Проверка на base64
             if not content.strip().startswith('vless://'):
                 try:
                     content = base64.b64decode(content).decode('utf-8')
-                    log(f"Файл {url} успешно декодирован из base64.")
                 except:
-                    log(f"Предупреждение: {url} не vless и не base64.")
                     continue
 
             lines = content.splitlines()
-            log(f"Всего строк в файле: {len(lines)}")
             added_from_source = 0
             
             for line in lines:
                 line = line.strip()
-                if not line.startswith('vless://'):
+                if not line.startswith('vless://') or '#' not in line:
                     continue
 
-                # Ищем ключевое слово во всей строке для надежности
-                line_lower = line.lower()
-                if any(key.lower() in line_lower for key in KEYWORDS):
+                # Извлекаем ТОЛЬКО название (всё, что после ПЕРВОГО знака #)
+                name_part = line.split('#', 1)[1].lower()
+                
+                # Проверяем ключевое слово СТРОГО в названии
+                if any(key.lower() in name_part for key in KEYWORDS):
                     if line not in unique_lines:
                         final_configs.append(line)
                         unique_lines.add(line)
                         added_from_source += 1
             
-            log(f"Из ресурса {url} отобрано: {added_from_source} серверов.")
+            log(f"Из ресурса {url} отобрано по названию: {added_from_source}")
 
         except Exception as e:
-            log(f"ОШИБКА при обработке {url}: {e}")
+            log(f"Ошибка при обработке {url}: {e}")
 
-    # Запись результатов (даже если список пуст)
+    # Запись результатов
     try:
         # 1. Текстовый файл
         with open("ForFriends.txt", "w", encoding="utf-8") as f:
