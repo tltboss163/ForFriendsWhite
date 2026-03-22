@@ -1,86 +1,34 @@
-import requests
-import base64
-import time
-import re
-from flask import Flask, Response
+name: Update Subscription
 
-app = Flask(__name__)
+on:
+  schedule:
+    - cron: '0 0 * * *' # Раз в сутки
+  workflow_dispatch: # Позволяет запустить вручную кнопкой
 
-# Настройки фильтрации
-SOURCES = [
-    "https://raw.githubusercontent.com/zieng2/wl/main/vless_lite.txt",
-    "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
-]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-# Список разрешенных протоколов
-ALLOWED_PROTOCOLS = ('vless://', 'ss://', 'trojan://')
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-# Ключевые слова, которые ОБЯЗАТЕЛЬНО должны быть в строке (если нужно)
-# Оставьте пустым [], если фильтр по словам не нужен
-REQUIRED_KEYWORDS = [] 
+      - name: Install dependencies
+        run: pip install requests
 
-def log(message):
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {message}")
+      - name: Run update script
+        run: python update_sub.py
 
-def process_subscription():
-    unique_configs = set()
-    total_scanned = 0
-    
-    for url in SOURCES:
-        try:
-            log(f"Запрос данных из: {url}")
-            r = requests.get(url, timeout=15)
-            r.raise_for_status()
-            
-            lines = r.text.splitlines()
-            for line in lines:
-                total_scanned += 1
-                clean_line = line.strip()
-                
-                # 1. Проверка на протокол
-                if not clean_line.startswith(ALLOWED_PROTOCOLS):
-                    continue
-                
-                # 2. Проверка на обязательные слова (например, reality)
-                if REQUIRED_KEYWORDS:
-                    if not any(word in clean_line.lower() for word in REQUIRED_KEYWORDS):
-                        continue
-                
-                # 3. Убираем мусор в названиях (после символа #)
-                # Если нужно оставить оригинальные названия, закомментируйте блок ниже
-                if '#' in clean_line:
-                    base_part, name = clean_line.split('#', 1)
-                    # Очищаем имя от лишних пробелов и спецсимволов для стабильности
-                    clean_name = re.sub(r'[^\w\s\-\[\]]', '', name).strip()
-                    clean_line = f"{base_part}#{clean_name}"
-
-                unique_configs.add(clean_line)
-                    
-        except Exception as e:
-            log(f"КРИТИЧЕСКАЯ ОШИБКА при чтении {url}: {e}")
-
-    final_list = list(unique_configs)
-    log(f"Сканирование завершено. Всего строк: {total_scanned}, Прошло фильтр: {len(final_list)}")
-    
-    # Собираем финальный текст
-    payload = "\n".join(final_list)
-    
-    # Кодируем в Base64 для универсальной подписки
-    encoded = base64.b64encode(payload.encode('utf-8')).decode('utf-8')
-    return encoded
-
-@app.route('/sub')
-def subscribe():
-    # Генерируем подписку при каждом запросе
-    data = process_subscription()
-    
-    if not data:
-        log("ВНИМАНИЕ: Подписка пуста!")
-        return "No servers found matching criteria", 404
-        
-    return Response(data, mimetype='text/plain')
-
-if __name__ == "__main__":
-    log("Запуск сервера формирования подписки...")
-    # Порт 8080, доступен снаружи
-    app.run(host='0.0.0.0', port=8080, debug=False)
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add index.txt sub_base64.txt
+          git commit -m "Auto-update servers: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || exit 0
+          git push
