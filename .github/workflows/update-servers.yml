@@ -2,22 +2,30 @@ name: Update Servers Hourly
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Каждый час
-  workflow_dispatch:  # Ручной запуск
+    - cron: '0 * * * *'  # Запуск каждый час
+  workflow_dispatch:      # Кнопка для ручного запуска
 
 jobs:
   update:
     runs-on: ubuntu-latest
     
+    # Убираем Warning о Node.js 20, принудительно включая Node.js 24
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    # Даем права боту на внесение изменений в репозиторий
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
+
       - name: Create filter script
         run: |
           cat > filter_servers.py << 'EOF'
@@ -25,13 +33,14 @@ jobs:
           import urllib.request
           import re
           from datetime import datetime, timezone
+          import sys
 
           SOURCE_URL = "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
           TARGETS = ["🇷🇺 VK", "🇷🇺 Yandex", "⏰ TimeWeb", "🔥 Max"]
 
           def main():
               try:
-                  # Скачиваем исходник
+                  print(f"[*] Fetching data from: {SOURCE_URL}")
                   req = urllib.request.Request(
                       SOURCE_URL,
                       headers={'User-Agent': 'Mozilla/5.0'}
@@ -39,8 +48,8 @@ jobs:
                   with urllib.request.urlopen(req, timeout=30) as response:
                       content = response.read().decode('utf-8', errors='ignore')
               except Exception as e:
-                  print(f"Error fetching source: {e}")
-                  return
+                  print(f"[ERROR] Failed to fetch source: {e}", file=sys.stderr)
+                  sys.exit(1)
 
               lines = content.strip().split('\n')
               seen = set()
@@ -50,49 +59,63 @@ jobs:
                   line = line.strip()
                   if not line or not line.startswith('vless://'):
                       continue
-                  
-                  # Проверяем, содержит ли нужный тег
+
+                  # Проверка на наличие нужных тегов
                   if any(target in line for target in TARGETS):
-                      # Убираем номер для дедупликации
+                      # Дедупликация (убираем хвост с номером)
                       clean = re.sub(r' — #\d+$', '', line)
                       if clean not in seen:
                           seen.add(clean)
                           filtered.append(clean)
 
-              # Записываем результат
-              header = f"# Auto-updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
-              header += f"# Source: {SOURCE_URL}\n"
-              header += f"# Servers: {len(filtered)}\n\n"
+              if not filtered:
+                  print("[WARNING] No matching servers found!", file=sys.stderr)
 
-              with open('vless_filtered.txt', 'w', encoding='utf-8') as f:
-                  f.write(header + '\n'.join(filtered))
+              try:
+                  header = f"# Auto-updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
+                  header += f"# Source: {SOURCE_URL}\n"
+                  header += f"# Servers count: {len(filtered)}\n\n"
 
-              print(f"Saved {len(filtered)} unique servers")
+                  with open('vless_filtered.txt', 'w', encoding='utf-8') as f:
+                      f.write(header + '\n'.join(filtered))
+
+                  print(f"[SUCCESS] Processed {len(filtered)} unique servers.")
+              except Exception as e:
+                  print(f"[ERROR] Writing file failed: {e}", file=sys.stderr)
+                  sys.exit(1)
 
           if __name__ == "__main__":
               main()
           EOF
-          
+
       - name: Run filter script
         run: python filter_servers.py
-        
+
       - name: Commit and push
         run: |
+          # Включаем подробный вывод и остановку при ошибках
+          set -ex
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Проверяем, есть ли изменения
+
           if [ -f vless_filtered.txt ]; then
             git add vless_filtered.txt
-            
+
+            # Проверка, изменился ли файл на самом деле
             if git diff --staged --quiet; then
-              echo "No changes to commit"
+              echo "No changes detected. Skipping commit."
             else
               git commit -m "🔄 Auto-update servers - $(date -u '+%Y-%m-%d %H:%M UTC')"
-              git push
-              echo "Changes pushed successfully"
+              
+              # Попытка пуша с логированием ошибки
+              git push || { 
+                echo "[ERROR] Push failed. Check if 'Read and write permissions' are enabled in Repo Settings -> Actions -> General." >&2; 
+                exit 1; 
+              }
+              echo "Changes pushed successfully."
             fi
           else
-            echo "Output file not created!"
+            echo "[ERROR] vless_filtered.txt not found!" >&2
             exit 1
           fi
