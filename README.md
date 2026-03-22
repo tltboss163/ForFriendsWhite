@@ -1,0 +1,2 @@
+# ForFriendsWhite
+список для друзей
