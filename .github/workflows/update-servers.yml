@@ -1,34 +1,35 @@
-name: Update Subscription
+name: Hourly Update
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Раз в сутки
+    - cron: '0 * * * *' # Запуск в 00 минут каждого часа
   workflow_dispatch: # Позволяет запустить вручную кнопкой
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Даем права на запись в репозиторий
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.x'
 
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run update script
+      - name: Run script
         run: python update_sub.py
 
-      - name: Commit and push changes
+      - name: Commit and Push
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add index.txt sub_base64.txt
-          git commit -m "Auto-update servers: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" || exit 0
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add ForFriends.txt sub_base64.txt
+          git commit -m "Hourly update: $(date)" || echo "No changes to commit"
           git push
