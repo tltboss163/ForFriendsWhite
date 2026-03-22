@@ -1,53 +1,86 @@
 import requests
 import base64
 import time
+import re
 from flask import Flask, Response
 
 app = Flask(__name__)
 
-# Ссылки на источники (можно добавить несколько через запятую)
+# Настройки фильтрации
 SOURCES = [
     "https://raw.githubusercontent.com/zieng2/wl/main/vless_lite.txt",
     "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
 ]
 
-def generate_subscription():
+# Список разрешенных протоколов
+ALLOWED_PROTOCOLS = ('vless://', 'ss://', 'trojan://')
+
+# Ключевые слова, которые ОБЯЗАТЕЛЬНО должны быть в строке (если нужно)
+# Оставьте пустым [], если фильтр по словам не нужен
+REQUIRED_KEYWORDS = [] 
+
+def log(message):
+    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {message}")
+
+def process_subscription():
     unique_configs = set()
+    total_scanned = 0
     
     for url in SOURCES:
         try:
-            print(f"[{time.strftime('%H:%M:%S')}] Загрузка: {url}")
+            log(f"Запрос данных из: {url}")
             r = requests.get(url, timeout=15)
             r.raise_for_status()
             
-            # Очистка и фильтрация
-            for line in r.text.splitlines():
-                line = line.strip()
-                # Берем только строки, начинающиеся на протоколы (vless, ss, trojan)
-                if line.startswith(('vless://', 'ss://', 'trojan://', 'vmess://')):
-                    unique_configs.add(line)
+            lines = r.text.splitlines()
+            for line in lines:
+                total_scanned += 1
+                clean_line = line.strip()
+                
+                # 1. Проверка на протокол
+                if not clean_line.startswith(ALLOWED_PROTOCOLS):
+                    continue
+                
+                # 2. Проверка на обязательные слова (например, reality)
+                if REQUIRED_KEYWORDS:
+                    if not any(word in clean_line.lower() for word in REQUIRED_KEYWORDS):
+                        continue
+                
+                # 3. Убираем мусор в названиях (после символа #)
+                # Если нужно оставить оригинальные названия, закомментируйте блок ниже
+                if '#' in clean_line:
+                    base_part, name = clean_line.split('#', 1)
+                    # Очищаем имя от лишних пробелов и спецсимволов для стабильности
+                    clean_name = re.sub(r'[^\w\s\-\[\]]', '', name).strip()
+                    clean_line = f"{base_part}#{clean_name}"
+
+                unique_configs.add(clean_line)
                     
         except Exception as e:
-            print(f"Ошибка при работе с {url}: {e}")
+            log(f"КРИТИЧЕСКАЯ ОШИБКА при чтении {url}: {e}")
 
-    # Склеиваем всё в один текст с переносом строки
-    final_text = "\n".join(list(unique_configs))
+    final_list = list(unique_configs)
+    log(f"Сканирование завершено. Всего строк: {total_scanned}, Прошло фильтр: {len(final_list)}")
     
-    # Считаем количество для лога в консоль
-    print(f"[{time.strftime('%H:%M:%S')}] Собрано серверов: {len(unique_configs)}")
+    # Собираем финальный текст
+    payload = "\n".join(final_list)
     
-    # Для клиентов (v2rayNG и т.д.) кодируем в Base64
-    # Если Remnawave ругается на Base64, можно возвращать final_text напрямую
-    encoded_data = base64.b64encode(final_text.encode('utf-8')).decode('utf-8')
-    return encoded_data
+    # Кодируем в Base64 для универсальной подписки
+    encoded = base64.b64encode(payload.encode('utf-8')).decode('utf-8')
+    return encoded
 
 @app.route('/sub')
-def sub_route():
-    data = generate_subscription()
+def subscribe():
+    # Генерируем подписку при каждом запросе
+    data = process_subscription()
+    
     if not data:
-        return "No servers found", 404
+        log("ВНИМАНИЕ: Подписка пуста!")
+        return "No servers found matching criteria", 404
+        
     return Response(data, mimetype='text/plain')
 
 if __name__ == "__main__":
-    # Запускаем. Порт 8080.
-    app.run(host='0.0.0.0', port=8080)
+    log("Запуск сервера формирования подписки...")
+    # Порт 8080, доступен снаружи
+    app.run(host='0.0.0.0', port=8080, debug=False)
