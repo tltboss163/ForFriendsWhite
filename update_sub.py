@@ -76,7 +76,7 @@ def main():
     # Запись результатов
     try:
         # 1. Текстовый файл (index.txt)
-        with open("index.txt", "w", encoding="utf-8") as f:
+        with open("ForFriends.txt", "w", encoding="utf-8") as f:
             f.write("\n".join(final_configs))
         
         # 2. Base64 файл для подписки (sub_base64.txt)
