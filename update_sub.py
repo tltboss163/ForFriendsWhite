@@ -2,9 +2,11 @@ import requests
 import base64
 import time
 import sys
+import urllib.parse
+import re
 
 # === НАСТРОЙКИ ===
-# Ищем ТОЛЬКО в названии (после символа #)
+# Ищем ТОЛЬКО в названии
 KEYWORDS = ['vk', 'yandex', 'яндекс', 'timeweb', 'max']
 
 SOURCES = [
@@ -18,7 +20,7 @@ def log(message):
 
 def main():
     final_configs = []
-    unique_lines = set()
+    unique_configs = set() # Здесь будем хранить ТОЛЬКО техническую часть конфигурации без имени
     
     log(f"Запуск строгой фильтрации по названиям: {', '.join(KEYWORDS)}")
 
@@ -34,7 +36,8 @@ def main():
             if not content.strip().startswith('vless://'):
                 try:
                     content = base64.b64decode(content).decode('utf-8')
-                except:
+                except Exception as e:
+                    log(f"[ОШИБКА] Контент не является base64 или vless: {e}")
                     continue
 
             lines = content.splitlines()
@@ -45,20 +48,32 @@ def main():
                 if not line.startswith('vless://') or '#' not in line:
                     continue
 
-                # Извлекаем ТОЛЬКО название (всё, что после ПЕРВОГО знака #)
-                name_part = line.split('#', 1)[1].lower()
+                # Разделяем строку на саму конфигурацию (до #) и имя (после #)
+                parts = line.split('#', 1)
+                base_config = parts[0]
                 
-                # Проверяем ключевое слово СТРОГО в названии
-                if any(key.lower() in name_part for key in KEYWORDS):
-                    if line not in unique_lines:
-                        final_configs.append(line)
-                        unique_lines.add(line)
+                # Декодируем имя из URL-формата (чтобы %20 превратилось в пробел, а кракозябры в эмодзи)
+                name_part_decoded = urllib.parse.unquote(parts[1])
+                
+                # Проверяем ключевое слово СТРОГО в декодированном названии
+                if any(key.lower() in name_part_decoded.lower() for key in KEYWORDS):
+                    
+                    # Проверяем на дубликаты ИМЕННО по технической части (без учета имени)
+                    if base_config not in unique_configs:
+                        unique_configs.add(base_config)
+                        
+                        # Очищаем имя от мусорной нумерации типа " — #123" в конце строки
+                        clean_name = re.sub(r'\s*—\s*#\d+$', '', name_part_decoded)
+                        
+                        # Собираем строку обратно
+                        final_line = f"{base_config}#{clean_name}"
+                        final_configs.append(final_line)
                         added_from_source += 1
             
-            log(f"Из ресурса {url} отобрано по названию: {added_from_source}")
+            log(f"Из ресурса {url} отобрано уникальных: {added_from_source}")
 
         except Exception as e:
-            log(f"Ошибка при обработке {url}: {e}")
+            log(f"[ОШИБКА] Сбой при обработке {url}: {e}")
 
     # Запись результатов
     try:
@@ -72,10 +87,10 @@ def main():
             encoded = base64.b64encode(full_content.encode('utf-8')).decode('utf-8')
             f.write(encoded)
             
-        log(f"ОБНОВЛЕНИЕ ЗАВЕРШЕНО. Сохранено серверов: {len(final_configs)}")
+        log(f"ОБНОВЛЕНИЕ ЗАВЕРШЕНО. Сохранено полностью уникальных серверов: {len(final_configs)}")
         
     except Exception as e:
-        log(f"ОШИБКА ЗАПИСИ: {e}")
+        log(f"[ОШИБКА] Сбой при записи файлов: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
