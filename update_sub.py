@@ -3,14 +3,13 @@ import base64
 import time
 import sys
 import urllib.parse
-import re
 
 # === НАСТРОЙКИ ===
 # Ищем ТОЛЬКО в названии
 KEYWORDS = ['vk', 'yandex', 'яндекс', 'timeweb', 'max']
 
 SOURCES = [
-    "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt",
+#    "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt",
     "https://raw.githubusercontent.com/zieng2/wl/main/vless_lite.txt"
 ]
 
@@ -20,7 +19,7 @@ def log(message):
 
 def main():
     final_configs = []
-    unique_configs = set() # Здесь будем хранить ТОЛЬКО техническую часть конфигурации без имени
+    unique_configs = set() # Здесь храним ТОЛЬКО техническую часть, чтобы исключить дубли
     
     log(f"Запуск строгой фильтрации по названиям: {', '.join(KEYWORDS)}")
 
@@ -48,12 +47,13 @@ def main():
                 if not line.startswith('vless://') or '#' not in line:
                     continue
 
-                # Разделяем строку на саму конфигурацию (до #) и имя (после #)
+                # Разделяем строку на саму конфигурацию (до #) и оригинальное имя (после #)
                 parts = line.split('#', 1)
                 base_config = parts[0]
+                original_name = parts[1]
                 
-                # Декодируем имя из URL-формата (чтобы %20 превратилось в пробел, а кракозябры в эмодзи)
-                name_part_decoded = urllib.parse.unquote(parts[1])
+                # Декодируем имя из URL-формата для корректного поиска ключевых слов (VK, Yandex и т.д.)
+                name_part_decoded = urllib.parse.unquote(original_name)
                 
                 # Проверяем ключевое слово СТРОГО в декодированном названии
                 if any(key.lower() in name_part_decoded.lower() for key in KEYWORDS):
@@ -62,11 +62,8 @@ def main():
                     if base_config not in unique_configs:
                         unique_configs.add(base_config)
                         
-                        # Очищаем имя от мусорной нумерации типа " — #123" в конце строки
-                        clean_name = re.sub(r'\s*—\s*#\d+$', '', name_part_decoded)
-                        
-                        # Собираем строку обратно
-                        final_line = f"{base_config}#{clean_name}"
+                        # Сохраняем строку в исходном виде, возвращая оригинальное имя (сохраняем нумерацию)
+                        final_line = f"{base_config}#{original_name}"
                         final_configs.append(final_line)
                         added_from_source += 1
             
@@ -87,7 +84,7 @@ def main():
             encoded = base64.b64encode(full_content.encode('utf-8')).decode('utf-8')
             f.write(encoded)
             
-        log(f"ОБНОВЛЕНИЕ ЗАВЕРШЕНО. Сохранено полностью уникальных серверов: {len(final_configs)}")
+        log(f"ОБНОВЛЕНИЕ ЗАВЕРШЕНО. Сохранено уникальных серверов с оригинальной нумерацией: {len(final_configs)}")
         
     except Exception as e:
         log(f"[ОШИБКА] Сбой при записи файлов: {e}")
