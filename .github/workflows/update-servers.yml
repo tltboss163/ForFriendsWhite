@@ -1,35 +1,62 @@
-name: Hourly Update
+name: Update Servers Hourly
 
 on:
   schedule:
-    - cron: '0 * * * *' # Запуск в 00 минут каждого часа
-  workflow_dispatch: # Позволяет запустить вручную кнопкой
+    - cron: '0 * * * *'  # Автоматический запуск каждый час
+  workflow_dispatch:      # Возможность запустить вручную кнопкой
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
+    
+    # Исправляем предупреждение о Node.js 20
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    # КРИТИЧЕСКИ ВАЖНО: Разрешаем запись в репозиторий (решает ошибку 128)
     permissions:
-      contents: write # Даем права на запись в репозиторий
+      contents: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
-      - name: Run script
+      - name: Run filter script
+        # Используем твое название файла
         run: python update_sub.py
 
-      - name: Commit and Push
+      - name: Commit and push
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          git add ForFriends.txt sub_base64.txt
-          git commit -m "Hourly update: $(date)" || echo "No changes to commit"
-          git push
+          set -ex
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Добавляем созданные скриптом файлы
+          if [ -f ForFriends.txt ] || [ -f sub_base64.txt ]; then
+            git add ForFriends.txt sub_base64.txt
+
+            # Проверяем, изменилось ли что-то в файлах
+            if git diff --staged --quiet; then
+              echo "Изменений не обнаружено. Пропускаем коммит."
+            else
+              git commit -m "🔄 Авто-обновление серверов - $(date -u '+%Y-%m-%d %H:%M UTC')"
+              git push || { 
+                echo "[ERROR] Ошибка Push. Проверь права Write в Settings -> Actions -> General." >&2; 
+                exit 1; 
+              }
+              echo "[SUCCESS] Файлы обновлены и загружены в репозиторий."
+            fi
+          else
+            echo "[ERROR] Ожидаемые файлы (ForFriends.txt или sub_base64.txt) не были созданы скриптом!" >&2
+            exit 1
+          fi
