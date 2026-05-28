@@ -1,1 +1,0 @@
-vless://dbb9c679-7f0f-4649-97aa-342d77796c69@185.242.19.252:443?encryption=none&type=xhttp&security=tls&host=top2197697635.mwscdn.ru&path=%2Fxhttppath&mode=auto&extra=null&fp=chrome&sni=top2197697635.mwscdn.ru&alpn=h2%2Chttp%2F1.1#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%2311
