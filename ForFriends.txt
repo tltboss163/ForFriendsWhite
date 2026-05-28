@@ -1,0 +1,1 @@
+vless://96fec558-76d9-40f5-8589-fe01afb6eaf6@84.201.164.3:443?flow=xtls-rprx-vision&encryption=none&type=tcp&security=reality&fp=chrome&sni=yandex.ru&pbk=HmRtly8onk8X3HeLdRuqN7q81Qv-7wX-tfCWOUAsFio#%F0%9F%87%B7%F0%9F%87%BA%20Yandex%20%E2%80%94%20%231
