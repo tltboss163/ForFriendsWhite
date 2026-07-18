@@ -1,1 +1,2 @@
-vless://8ffae902-a69a-07d0-b231-751867c2bd56@89.208.231.191:8443?flow=xtls-rprx-vision&encryption=none&type=raw&security=reality&fp=qq&sni=max.ru&pbk=4CH3o5zOMcFNMbnwXnkAg0FFepmsc0QzhahXkUzb1ik&sid=d8c6b58bcbb0c323#%F0%9F%87%B7%F0%9F%87%BA%20VK%20%E2%80%94%20%231
+vless://cbc1f2cd-187d-07d0-a2b1-e5b3ab8c63b0@89.208.231.191:8443?flow=xtls-rprx-vision&encryption=none&type=raw&security=reality&fp=qq&sni=max.ru&pbk=4CH3o5zOMcFNMbnwXnkAg0FFepmsc0QzhahXkUzb1ik&sid=d8c6b58bcbb0c323#%F0%9F%87%B7%F0%9F%87%BA%20VK%20%E2%80%94%20%231
+vless://2c634977-584e-4e1f-b501-1b70c77a6743@78.159.245.32:443?encryption=none&type=ws&security=tls&path=%2Fapi%2Fv1%2Fvideo-stream&host=furrycdn.net&fp=firefox&sni=furrycdn.net#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%2321
