@@ -1,1 +1,0 @@
-vless://88ce17fc-7c6c-43a7-98a4-33fb59697b17@95.163.214.43:443?encryption=none&extra=null&fp=firefox&mode=stream-one&path=%2Fapi%2Fv1%2Fe0163615&pbk=VdG4ntV15FfNWV4rvSny2mvOTSXfOUVKHNC0dOyXY2s&security=reality&sid=864fbb122f15b43d&sni=ok.ru&type=xhttp#%F0%9F%87%B7%F0%9F%87%BA%20VK%20%E2%80%94%20%231
