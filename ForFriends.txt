@@ -1,1 +1,5 @@
 vless://c90395e6-2140-47ad-a54d-9b166729d3ef@147.45.175.81:443?encryption=none&fp=random&mode=gun&security=tls&serviceName=grpc-ru&sni=xssite.webredirect.org&type=grpc#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%236
+vless://c90395e6-2140-47ad-a54d-9b166729d3ef@147.45.175.81:443?encryption=none&fp=ios&mode=gun&security=tls&serviceName=grpc-ru&sni=xssite.webredirect.org&type=grpc#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%237
+vless://c90395e6-2140-47ad-a54d-9b166729d3ef@147.45.175.81:443?encryption=none&fp=random&host=xsru2.freeddns.org&path=%2Fwsru&security=tls&sni=xsru2.freeddns.org&type=ws#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%238
+vless://c90395e6-2140-47ad-a54d-9b166729d3ef@147.45.175.81:443?encryption=none&fp=ios&host=xsru2.freeddns.org&path=%2Fwsru&security=tls&sni=xsru2.freeddns.org&type=ws#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%239
+vless://c90395e6-2140-47ad-a54d-9b166729d3ef@147.45.175.81:443?encryption=none&fp=firefox&host=xsru2.freeddns.org&path=%2Fwsru&security=tls&sni=xsru2.freeddns.org&type=ws#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%2310
