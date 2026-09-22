@@ -1,0 +1,1 @@
+vless://8057eabc-921d-4ef5-9acb-80ccc6b48379@72.56.1.5:443?encryption=none&fp=firefox&mode=multi&pbk=0FeZt3p4idHrFpZRIjn69W_zUFiVBKmoGhkqSqbAvRw&security=reality&serviceName=Popka&sid=271684C10127374D&sni=www.siemens.com&type=grpc#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%235
