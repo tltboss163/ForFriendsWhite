@@ -4,4 +4,3 @@ vless://bc5ec86c-3e65-4272-994c-59a924c72a68@217.19.122.200:443?encryption=none&
 vless://bc5ec86c-3e65-4272-994c-59a924c72a68@217.19.122.200:443?alpn=http%2F1.1&encryption=none&fp=chrome&host=fbsv6.guardora.pro&path=%2Fws&security=tls&sni=fbsv6.guardora.pro&type=ws#%F0%9F%87%B7%F0%9F%87%BA%20VK%20%E2%80%94%20%234
 vless://bc5ec86c-3e65-4272-994c-59a924c72a68@217.19.122.200:443?encryption=none&fp=chrome&host=fbsv6.guardora.pro&path=%2Fws&security=tls&sni=fbsv6.guardora.pro&type=ws#%F0%9F%87%B7%F0%9F%87%BA%20VK%20%E2%80%94%20%235
 vless://bc5ec86c-3e65-4272-994c-59a924c72a68@217.19.122.200:443?alpn=http%2F1.1&encryption=none&fp=firefox&host=fbsv6.guardora.pro&path=%2Fws&security=tls&sni=fbsv6.guardora.pro&type=ws#%F0%9F%87%B7%F0%9F%87%BA%20VK%20%E2%80%94%20%236
-vless://6f73611a-bfd9-4712-9f33-fda2da70332a@201.51.4.39:443?encryption=none&flow=xtls-rprx-vision&fp=chrome&security=tls&sni=freevk.cryposikel.ru&type=raw#%F0%9F%87%B7%F0%9F%87%BA%20Timeweb%20%E2%80%94%20%2312
